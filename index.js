@@ -34,7 +34,7 @@ function compressVideo(inputPath, outputPath, callback) {
         videoResolution = '-2:360'; 
     }
 
-    const ffmpegCommand = ffmpeg(inputPat
+    const ffmpegCommand = ffmpeg(inputPath)
         .outputOptions('-vf', `scale=${videoResolution}`)
         .outputOptions('-c:v', 'libx264')
         .outputOptions('-crf', crfValue.toString()) 

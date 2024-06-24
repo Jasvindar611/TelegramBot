@@ -11,7 +11,7 @@ const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 
-const token = '7466670779:AAGZlsmxMP5qKo6b_y_oS35zxa-4HbZm2mU';
+const token = process.env.TOKEN;
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 

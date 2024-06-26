@@ -1,8 +1,7 @@
 const express = require('express');
 const app = express();
 const http = require('http');
-const cors = require('cors');
-const bodyParser = require('body-parser');
+const axios = require('axios');
 const server = http.createServer(app);
 const telegramBot = require('node-telegram-bot-api');
 const ytdl = require('ytdl-core');
@@ -18,26 +17,26 @@ ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 const MAX_FILE_SIZE_MB = 50;
 
 function compressVideo(inputPath, outputPath, callback) {
-    const targetSizeMB = MAX_FILE_SIZE_MB; 
+    const targetSizeMB = MAX_FILE_SIZE_MB;
     const inputSizeMB = fs.statSync(inputPath).size / (1024 * 1024);
 
     let videoBitrate = '1000k';
     let audioBitrate = '128k';
     let videoResolution = '-2:480';
-    let crfValue = 28; // Default CRF
+    let crfValue = 28;
 
 
     if (inputSizeMB > targetSizeMB) {
         videoBitrate = '500k';
-        audioBitrate = '64k'; 
-        crfValue = 30; 
-        videoResolution = '-2:360'; 
+        audioBitrate = '64k';
+        crfValue = 30;
+        videoResolution = '-2:360';
     }
 
     const ffmpegCommand = ffmpeg(inputPath)
         .outputOptions('-vf', `scale=${videoResolution}`)
         .outputOptions('-c:v', 'libx264')
-        .outputOptions('-crf', crfValue.toString()) 
+        .outputOptions('-crf', crfValue.toString())
         .outputOptions('-b:a', audioBitrate)
         .on('end', () => {
             callback(null, outputPath);
@@ -55,12 +54,37 @@ function sanitizeFileName(filename) {
     return filename.replace(/[<>:"/\\|?*]+/g, '').replace(/ /g, '_');
 }
 
+const greetings = ['hi', 'hey', 'hy', 'hlo', 'hello', 'hi', 'hii', 'hiii', 'hiiii'];
+
 const bot = new telegramBot(token, { polling: true });
 
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
     console.log(chatId, text);
+
+    const introMessage = `
+👋 *Hello! I'm your digital helper bot.* 🎉
+
+*Features:*
+📺 *YouTube Downloader*: Send me a YouTube link, and I'll download it for you!
+📚 *Wikipedia Explorer*: Type any topic, and I'll fetch interesting facts from Wikipedia.
+
+*How to Use:*
+- *YouTube*: Paste a YouTube link.
+- *Wikipedia*: Type a word or phrase.
+
+🌟 *Start by sending me a message!* Let's explore the digital world together! 🚀
+  `;
+    if (text == '/start') {
+        bot.sendMessage(chatId, introMessage, { parse_mode: 'Markdown' });
+        return;
+    }
+
+    if(greetings.includes(text.toLowerCase().trim())){
+        bot.sendMessage(chatId, `👋 Hello! How can I assist you today? Type "/start" to see what I can do!`);
+        return;
+    }
 
     if (ytdl.validateURL(text)) {
         try {
@@ -73,6 +97,7 @@ bot.on('message', async (msg) => {
             const compressedVideoPath = path.resolve(videosDir, `${sanitizedTitle}_compressed.mp4`);
 
             bot.sendMessage(chatId, 'Downloading your video. Please wait...');
+
 
             ytdl(text, { format: 'mp4' }).pipe(fs.createWriteStream(videoPath)).on('finish', async () => {
                 let stats = fs.statSync(videoPath);
@@ -126,26 +151,12 @@ bot.on('message', async (msg) => {
             bot.sendMessage(chatId, 'Sorry, there was an error processing your request.');
         }
     } else {
-        bot.sendMessage(chatId, 'Please send a valid YouTube URL.');
+        fetchWikipediaInfo(text, chatId);
     }
 });
 
-app.use(bodyParser.json());
-app.use(cors({
-    origin: 'http://localhost:4200',
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    credentials: true
-}));
 
-app.use(bodyParser.urlencoded({ extended: false }));
 
-app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-    res.setHeader("Access-Control-Allow-Methods", "GET , POST, PATCH, PUT, DELETE, OPTIONS");
-    next();
-});
-
-server.listen(3000, '0.0.0.0', () => {
+server.listen(3000, 'localhost', () => {
     console.log("Server is running on port 3000");
 });
